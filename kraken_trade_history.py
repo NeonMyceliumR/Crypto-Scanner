@@ -31,7 +31,7 @@ import time
 import urllib.parse
 import csv
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
     import requests
@@ -141,8 +141,8 @@ def fetch_all_trades(api_key, api_secret):
 
 # ── Formatting helpers ──────────────────────────────────────────────────────
 
-def _fmt_time(unix_ts: float) -> str:
-    return datetime.utcfromtimestamp(unix_ts).strftime("%Y-%m-%d %H:%M:%S UTC")
+def _fmt_time(unix_ts):
+    return datetime.fromtimestamp(unix_ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
 
 def _fmt_pnl(value: str) -> str:
@@ -187,7 +187,8 @@ def print_trades(trades):
     print(sep)
 
     for t in trades:
-        pnl_raw = t.get("net", t.get("misc", ""))
+        # Kraken returns realized P&L in the 'net' field for margin trades
+        pnl_raw = t.get("net", "")
         print(
             f"{_fmt_time(float(t['time'])):<{col['time']}}"
             f"{t.get('pair',''):<{col['pair']}}"
