@@ -141,6 +141,77 @@ This tool uses the **free Binance REST API** (no authentication required):
 - Crypto trading is risky - only invest what you can afford to lose
 - This tool scans Binance only; other exchanges may have different activity
 
+---
+
+## Trade Journal — Mistake Analysis Engine
+
+`trade_journal.py` is a companion module that turns raw trade logs into behavioural intelligence. Every trade is tagged with the mistakes that occurred, and a statistical engine surfaces which habits are actually costing you money.
+
+### Mistake checkboxes
+
+Each trade can be tagged with any combination of:
+
+| Key | Label |
+|-----|-------|
+| `entered_early` | Entered early |
+| `entered_late` | Entered late |
+| `moved_stop` | Moved stop |
+| `increased_size` | Increased size |
+| `revenge_trade` | Revenge trade |
+| `broke_plan` | Broke plan |
+| `ignored_signal` | Ignored signal |
+| `emotional` | Emotional |
+| `fomo` | FOMO |
+| `took_partial_profit_early` | Took partial profit early |
+
+### Statistical engine
+
+For every mistake the engine computes:
+
+- **Win rate** with the mistake present vs. absent
+- **Average PnL** with the mistake present vs. absent
+- **Chi-square test** — is the relationship statistically significant?
+- **Phi coefficient** — how strong is the relationship?
+- **Trend** — is this mistake improving or worsening over time?
+
+Insights are then translated into plain English and ranked by PnL impact, for example:
+
+> *When you "Emotional", your win rate drops from 57% to 0% (5 of 40 trades flagged). Average PnL: $-36.59 with this mistake vs $+4.88 without (-41.47 per trade). This is statistically significant — the relationship is strong (φ=-0.38, p=0.017). Watch out: this behaviour is getting worse over time.*
+
+### Usage
+
+```bash
+# Log a completed trade interactively
+python trade_journal.py log
+
+# Full behavioural report (all time)
+python trade_journal.py report
+
+# Report restricted to the last 30 days
+python trade_journal.py report 30
+```
+
+### Log trades programmatically
+
+```python
+from trade_journal import log_trade, print_mistake_report
+
+log_trade(
+    symbol='BTCUSDT',
+    entry_price=30000,
+    exit_price=29100,
+    size_usd=1000,
+    mistakes=['revenge_trade', 'emotional'],
+    notes='Chased a loss after getting stopped out'
+)
+
+print_mistake_report()
+```
+
+Trades are stored locally in `trades.json` — no external services required.
+
+---
+
 ## Roadmap
 
 - [ ] Multi-exchange support (Kraken, Coinbase, etc.)
