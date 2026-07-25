@@ -153,16 +153,16 @@ Each trade can be tagged with any combination of:
 
 | Key | Label |
 |-----|-------|
-| `entered_early` | Entered early |
-| `entered_late` | Entered late |
-| `moved_stop` | Moved stop |
-| `increased_size` | Increased size |
+| `entered_early` | Enter early |
+| `entered_late` | Enter late |
+| `moved_stop` | Move the stop |
+| `increased_size` | Oversize the position |
 | `revenge_trade` | Revenge trade |
-| `broke_plan` | Broke plan |
-| `ignored_signal` | Ignored signal |
-| `emotional` | Emotional |
-| `fomo` | FOMO |
-| `took_partial_profit_early` | Took partial profit early |
+| `broke_plan` | Break the plan |
+| `ignored_signal` | Ignore a signal |
+| `emotional` | Trade emotionally |
+| `fomo` | FOMO in |
+| `took_partial_profit_early` | Take partial profit early |
 
 ### Statistical engine
 
@@ -176,7 +176,7 @@ For every mistake the engine computes:
 
 Insights are then translated into plain English and ranked by PnL impact, for example:
 
-> *When you "Emotional", your win rate drops from 57% to 0% (5 of 40 trades flagged). Average PnL: $-36.59 with this mistake vs $+4.88 without (-41.47 per trade). This is statistically significant — the relationship is strong (φ=-0.38, p=0.017). Watch out: this behaviour is getting worse over time.*
+> *When you Trade emotionally, your win rate drops from 57% to 0% (5 of 40 trades flagged). Average PnL: $-36.59 with this mistake vs $+4.88 without (-41.47 per trade). This is statistically significant — the relationship is strong (φ=-0.38, p=0.017). Watch out: this behaviour is getting worse over time.*
 
 ### Usage
 
