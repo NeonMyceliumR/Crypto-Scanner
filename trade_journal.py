@@ -39,16 +39,16 @@ MISTAKES = [
 ]
 
 MISTAKE_LABELS = {
-    'entered_early':             'Entered early',
-    'entered_late':              'Entered late',
-    'moved_stop':                'Moved stop',
-    'increased_size':            'Increased size',
+    'entered_early':             'Enter early',
+    'entered_late':              'Enter late',
+    'moved_stop':                'Move the stop',
+    'increased_size':            'Oversize the position',
     'revenge_trade':             'Revenge trade',
-    'broke_plan':                'Broke plan',
-    'ignored_signal':            'Ignored signal',
-    'emotional':                 'Emotional',
-    'fomo':                      'FOMO',
-    'took_partial_profit_early': 'Took partial profit early',
+    'broke_plan':                'Break the plan',
+    'ignored_signal':            'Ignore a signal',
+    'emotional':                 'Trade emotionally',
+    'fomo':                      'FOMO in',
+    'took_partial_profit_early': 'Take partial profit early',
 }
 
 
@@ -95,7 +95,7 @@ def log_trade(symbol, entry_price, exit_price, size_usd, mistakes=None, notes=''
 
     trades = load_trades()
     trade = {
-        'id':        len(trades) + 1,
+        'id':        (max(t['id'] for t in trades) + 1) if trades else 1,
         'timestamp': datetime.now().isoformat(),
         'symbol':    symbol.upper(),
         'entry':     entry_price,
@@ -117,7 +117,13 @@ def log_trade(symbol, entry_price, exit_price, size_usd, mistakes=None, notes=''
 # ── Statistics ────────────────────────────────────────────────────────────────
 
 def _chi_square_p(chi2_stat):
-    """Approximate two-tailed p-value for chi-square with 1 degree of freedom."""
+    """
+    Approximate p-value for chi-square with 1 degree of freedom.
+
+    For χ²(1), the CDF is erf(√(x/2)), so the survival function is
+    erfc(√(x/2)).  Note: √(x/2) == √x / √2, so the two equivalent
+    forms are identical.
+    """
     if chi2_stat <= 0:
         return 1.0
     return math.erfc(math.sqrt(chi2_stat / 2.0))
@@ -146,7 +152,8 @@ def analyse_mistake(trades, mistake_key):
     with_m  = [t for t in trades if mistake_key in t['mistakes']]
     without = [t for t in trades if mistake_key not in t['mistakes']]
 
-    if len(with_m) < 2 or len(without) < 2:
+    # Require at least 5 trades on each side for reliable inference
+    if len(with_m) < 5 or len(without) < 5:
         return None
 
     # 2×2 contingency table
@@ -174,7 +181,9 @@ def analyse_mistake(trades, mistake_key):
     late_half  = sorted_trades[mid:]
     rate_early = sum(1 for t in early_half if mistake_key in t['mistakes']) / len(early_half) if early_half else 0
     rate_late  = sum(1 for t in late_half  if mistake_key in t['mistakes']) / len(late_half)  if late_half  else 0
-    trend = rate_late - rate_early  # positive = worsening, negative = improving
+    # Positive trend = mistake becoming more frequent over time.
+    # Whether that is "worsening" or "improving" depends on the mistake's impact.
+    trend = rate_late - rate_early
 
     return {
         'mistake':          mistake_key,
@@ -207,12 +216,6 @@ def _strength_label(phi):
     return 'weak'
 
 
-def _trend_label(trend):
-    if abs(trend) < 0.05:
-        return 'stable'
-    return 'worsening' if trend > 0 else 'improving'
-
-
 def generate_insight(stat):
     """Translate a mistake-stat dict into plain English."""
     label        = stat['label']
@@ -231,7 +234,7 @@ def generate_insight(stat):
     # Win-rate impact
     direction = 'drops' if wr_with < wr_without else 'improves'
     lines.append(
-        f'When you "{label}", your win rate {direction} from {wr_without:.0f}% '
+        f'When you {label}, your win rate {direction} from {wr_without:.0f}% '
         f'to {wr_with:.0f}% ({count} of {n} trades flagged).'
     )
 
@@ -255,14 +258,14 @@ def generate_insight(stat):
             f'log more trades for a clearer signal.'
         )
 
-    # Trend over time
-    tl = _trend_label(trend)
-    if tl == 'improving':
-        lines.append('Good news: this behaviour is improving over time.')
-    elif tl == 'worsening':
+    # Trend: becoming more frequent = worsening when mistake hurts, improving when it helps
+    mistake_hurts = pnl_with < pnl_without
+    if abs(trend) < 0.05:
+        lines.append('The frequency of this behaviour has been stable over time.')
+    elif (trend > 0) == mistake_hurts:
         lines.append('Watch out: this behaviour is getting worse over time.')
     else:
-        lines.append('The frequency of this mistake has been stable over time.')
+        lines.append('Good news: this behaviour is improving over time.')
 
     return ' '.join(lines)
 
@@ -305,8 +308,8 @@ def print_mistake_report(days=None):
         try:
             pnl_stdev = statistics.stdev(pnl_values)
             avg_pnl   = statistics.mean(pnl_values)
-            sharpe    = (avg_pnl / pnl_stdev) * math.sqrt(total) if pnl_stdev else float('inf')
-            print(f'Avg PnL/trade: ${avg_pnl:+.2f}  |  PnL StDev: ${pnl_stdev:.2f}  |  Sharpe-proxy: {sharpe:.2f}')
+            expectancy_ratio = (avg_pnl / pnl_stdev) if pnl_stdev else float('inf')
+            print(f'Avg PnL/trade: ${avg_pnl:+.2f}  |  PnL StDev: ${pnl_stdev:.2f}  |  Expectancy ratio: {expectancy_ratio:.2f}')
         except statistics.StatisticsError:
             pass
 
